@@ -2,4 +2,4 @@ pandas
 streamlit
 openpyxl
 xlsxwriter
-pdfkit
+openai
