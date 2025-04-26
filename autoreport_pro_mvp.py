@@ -3,24 +3,24 @@ import pandas as pd
 import openai
 from io import BytesIO
 import os
-import openai
 
-response = openai.ChatCompletion.create(
-    model="gpt-4",
-    messages=[
-        {"role": "user", "content": "Say hello, test if connection works."}
-    ]
-)
+# OpenAI API setup (use your key here or set as env var)
+openai.api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 
-st.write(response['choices'][0]['message']['content'])
+# Create OpenAI client
+client = openai.OpenAI()
 
+# Helper function to chat
+def chat_with_openai(messages, model="gpt-4"):
+    response = client.chat.completions.create(
+        model=model,
+        messages=messages
+    )
+    return response.choices[0].message.content
 
 # Set up Streamlit
 st.set_page_config(page_title="AutoReport Pro", layout="centered")
 st.title("📊 AutoReport Pro - Spreadsheet Cleaner + GPT Summary")
-
-# OpenAI API setup (use your key here or set as env var)
-openai.api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 
 uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx"])
 
@@ -41,7 +41,7 @@ def gpt_summary(df, removed_rows):
     prompt = f"""
 You are a professional data analyst. Analyze the following spreadsheet and provide:
 1. Number of rows before and after cleaning.
-2. Duplicates or empty rows removed.
+2. Duplicates or empty rows removed: {removed_rows}.
 3. Key statistics (e.g. average salary, frequent departments, max/min values).
 4. Any anomalies or trends.
 Use bullet points.
@@ -49,18 +49,12 @@ Use bullet points.
 Spreadsheet sample (first few rows):
 {df.head(10).to_string(index=False)}
 """
-
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4",
-            messages=[
-                {"role": "system", "content": "You are a helpful and concise data analyst."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=500,
-            temperature=0.5,
-        )
-        return response.choices[0].message['content']
+        summary = chat_with_openai([
+            {"role": "system", "content": "You are a helpful and concise data analyst."},
+            {"role": "user", "content": prompt}
+        ])
+        return summary
     except Exception as e:
         return f"Error generating summary: {e}"
 
