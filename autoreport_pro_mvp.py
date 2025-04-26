@@ -3,6 +3,17 @@ import pandas as pd
 import openai
 from io import BytesIO
 import os
+import openai
+
+response = openai.ChatCompletion.create(
+    model="gpt-4",
+    messages=[
+        {"role": "user", "content": "Say hello, test if connection works."}
+    ]
+)
+
+st.write(response['choices'][0]['message']['content'])
+
 
 # Set up Streamlit
 st.set_page_config(page_title="AutoReport Pro", layout="centered")
