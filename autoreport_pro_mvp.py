@@ -17,7 +17,7 @@ def chat_with_openai(messages, model="gpt-4"):
 # Set up Streamlit
 st.set_page_config(page_title="AutoReport Pro", layout="centered")
 st.title("📊 AutoReport Pro - Spreadsheet Cleaner + GPT Summary")
-st.image("https://images.unsplash.com/photo-1603791440384-56cd371ee9a7?crop=entropy&cs=tinysrgb&fit=crop&h=150&q=80", use_column_width=True)
+st.image("https://images.unsplash.com/photo-1603791440384-56cd371ee9a7?crop=entropy&cs=tinysrgb&fit=crop&h=150&q=80", use_container_width=True)
 
 uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx"])
 
@@ -36,22 +36,32 @@ def generate_xlsx_download(df):
 
 def gpt_summary(df, removed_rows):
     prompt = f"""
-You are a professional data analyst. Analyze the following spreadsheet and provide:
-1. Number of rows before and after cleaning.
-2. Duplicates or empty rows removed.
-3. Key statistics (e.g. average salary, frequent departments, max/min values).
-4. Any anomalies or trends.
-Use bullet points.
+You are a professional data analyst.
+Analyze this spreadsheet.
 
+Provide:
+- How many rows before and after cleaning
+- How many duplicates or empty rows were removed
+- Top 3 interesting trends or anomalies
+- Key quick stats (average salary, most common department, highest/lowest salaries)
+
+Only give a short bullet-pointed professional report. No tutorials. No user guidance.
 Spreadsheet sample (first few rows):
 {df.head(10).to_string(index=False)}
 """
+
     try:
-        summary = chat_with_openai([
-            {"role": "system", "content": "You are a helpful and concise data analyst."},
-            {"role": "user", "content": prompt}
-        ])
-        return summary
+        client = openai.OpenAI()
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a professional and concise data analyst."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500,
+            temperature=0.5,
+        )
+        return response.choices[0].message.content
     except Exception as e:
         return f"Error generating summary: {e}"
 
