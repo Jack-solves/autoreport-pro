@@ -6,16 +6,15 @@ import os
 import random
 
 # ========== Setup ==========
-# Set Streamlit page config
 st.set_page_config(page_title="AutoReport Pro", layout="centered")
 
 # Title
 st.title("📊 AutoReport Pro - Spreadsheet Cleaner + GPT Summary")
 
-# Random image from Unsplash
+# Random reliable Unsplash image
 topics = ["data", "spreadsheet", "analytics", "report", "business", "office", "technology"]
 topic = random.choice(topics)
-image_url = f"https://source.unsplash.com/800x250/?{topic}"
+image_url = f"https://source.unsplash.com/featured/800x250/?{topic}"
 st.image(image_url, use_container_width=True)
 
 # Friendly welcome message
@@ -27,7 +26,6 @@ st.markdown(
 )
 
 # ========== OpenAI Setup ==========
-# Automatically pick up API key from Streamlit secrets or environment variable
 openai_api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 client = openai.OpenAI(api_key=openai_api_key)
 
@@ -48,15 +46,15 @@ def generate_xlsx_download(df):
     buffer.seek(0)
     return buffer
 
-def gpt_summary(df, removed_rows):
+def gpt_summary(df, removed_rows, filename):
     """Ask OpenAI to summarize the cleaned spreadsheet."""
     prompt = f"""
-You are a professional data analyst. Analyze the following spreadsheet and provide:
-1. Number of rows before and after cleaning.
-2. Duplicates or empty rows removed.
-3. Key statistics (e.g. average salary, frequent departments, max/min values).
-4. Any anomalies or trends.
-Use short bullet points.
+You are a professional data analyst. Strictly reply with:
+- Number of rows before and after cleaning
+- Duplicates or empty rows removed
+- Key quick statistics (average salary, common departments, max/min values)
+- 1-3 short bullet points on anomalies or interesting trends
+**Do not explain that you cannot interact with the file, just answer with direct results.**
 
 Spreadsheet sample (first few rows):
 {df.head(10).to_string(index=False)}
@@ -66,15 +64,20 @@ Spreadsheet sample (first few rows):
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful and concise data analyst."},
+                {"role": "system", "content": "You are a helpful and highly concise data analyst."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=500,
-            temperature=0.5,
+            temperature=0.2,
         )
         return response.choices[0].message.content
     except Exception as e:
         return f"Error generating summary: {e}"
+
+def suggest_title(filename):
+    """Generate a title based on filename."""
+    base = os.path.splitext(filename)[0].replace("_", " ").replace("-", " ").title()
+    return f"Data Quality Report for {base}"
 
 # ========== Main App Logic ==========
 
@@ -93,11 +96,12 @@ if uploaded_file:
         st.info(f"🔍 Removed {removed_rows} empty or duplicate row(s).")
 
         st.subheader("🏷️ Suggested Report Title")
-        st.markdown("Suggested Title:")
+        suggested_title = suggest_title(uploaded_file.name)
+        st.markdown(f"**{suggested_title}**")
 
         st.subheader("🧠 AI Report Summary")
         with st.spinner("Generating insights..."):
-            summary = gpt_summary(cleaned_df, removed_rows)
+            summary = gpt_summary(cleaned_df, removed_rows, uploaded_file.name)
             st.markdown(summary)
 
         xlsx_data = generate_xlsx_download(cleaned_df)
