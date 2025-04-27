@@ -14,9 +14,14 @@ st.set_page_config(page_title="AutoReport Pro", layout="centered")
 st.title("📊 AutoReport Pro - Spreadsheet Cleaner + Smart Summary")
 
 # Random reliable Unsplash image
-topics = ["data", "spreadsheet", "analytics", "report", "business", "office", "technology"]
-topic = random.choice(topics)
-image_url = f"https://source.unsplash.com/featured/800x250/?{topic}"
+image_pool = [
+    "https://images.unsplash.com/photo-1559027615-2a9b5e00b5ec?auto=format&fit=crop&w=800&q=60",  # Office laptop
+    "https://images.unsplash.com/photo-1556155092-490a1ba16284?auto=format&fit=crop&w=800&q=60",  # Data screen
+    "https://images.unsplash.com/photo-1581091870627-3b6cc6c7f243?auto=format&fit=crop&w=800&q=60",  # Analytics chart
+    "https://images.unsplash.com/photo-1556742400-b5a63d574047?auto=format&fit=crop&w=800&q=60",  # Desk with laptop
+    "https://images.unsplash.com/photo-1603791452906-c5d31b4f59f5?auto=format&fit=crop&w=800&q=60",  # Minimal office
+]
+image_url = random.choice(image_pool)
 
 try:
     response = requests.get(image_url, timeout=10)
