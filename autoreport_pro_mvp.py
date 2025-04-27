@@ -4,18 +4,26 @@ import openai
 from io import BytesIO
 import os
 import random
+import requests
+from PIL import Image
 
 # ========== Setup ==========
 st.set_page_config(page_title="AutoReport Pro", layout="centered")
 
 # Title
-st.title("📊 AutoReport Pro - Spreadsheet Cleaner + GPT Summary")
+st.title("📊 AutoReport Pro - Spreadsheet Cleaner + Smart Summary")
 
 # Random reliable Unsplash image
 topics = ["data", "spreadsheet", "analytics", "report", "business", "office", "technology"]
 topic = random.choice(topics)
 image_url = f"https://source.unsplash.com/featured/800x250/?{topic}"
-st.image(image_url, use_container_width=True)
+
+try:
+    response = requests.get(image_url, timeout=10)
+    img = Image.open(BytesIO(response.content))
+    st.image(img, use_container_width=True)
+except Exception as e:
+    st.warning("🖼️ Couldn't load image. Continuing without header image.")
 
 # Friendly welcome message
 st.markdown(
