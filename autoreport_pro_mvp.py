@@ -1,31 +1,26 @@
 import streamlit as st
 import pandas as pd
-import openai
 from io import BytesIO
+import openai
 import os
 
-# Correct OpenAI client setup
-client = openai.OpenAI()  # Automatically uses secret
+# OpenAI setup
+client = openai.OpenAI()
+openai.api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
 
-def chat_with_openai(messages, model="gpt-4"):
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages
-    )
-    return response.choices[0].message.content
-
-# Set up Streamlit
-st.set_page_config(page_title="AutoReport Pro", layout="centered")
+# Streamlit app setup
+st.set_page_config(page_title="AutoReport Pro - Spreadsheet Cleaner + GPT Summary", layout="centered")
+st.image("your_image.png", use_container_width=True)
 st.title("📊 AutoReport Pro - Spreadsheet Cleaner + GPT Summary")
-st.image("https://images.unsplash.com/photo-1603791440384-56cd371ee9a7?crop=entropy&cs=tinysrgb&fit=crop&h=150&q=80", use_container_width=True)
 
 uploaded_file = st.file_uploader("Upload an Excel file", type=["xlsx"])
 
+# Functions
 def clean_data(df):
     initial_rows = df.shape[0]
     df_cleaned = df.dropna(how="all").drop_duplicates()
     removed_rows = initial_rows - df_cleaned.shape[0]
-    return df_cleaned, removed_rows
+    return df_cleaned, initial_rows, removed_rows
 
 def generate_xlsx_download(df):
     buffer = BytesIO()
@@ -34,28 +29,31 @@ def generate_xlsx_download(df):
     buffer.seek(0)
     return buffer
 
-def gpt_summary(df, removed_rows):
+def gpt_summary(df, initial_rows, removed_rows):
     prompt = f"""
 You are a professional data analyst.
-Analyze this spreadsheet.
 
-Provide:
-- How many rows before and after cleaning
-- How many duplicates or empty rows were removed
-- Top 3 interesting trends or anomalies
-- Key quick stats (average salary, most common department, highest/lowest salaries)
+Here is the summary you need to create:
+- Rows before cleaning: {initial_rows}
+- Rows after cleaning: {df.shape[0]}
+- Rows removed (empty or duplicates): {removed_rows}
 
-Only give a short bullet-pointed professional report. No tutorials. No user guidance.
+Please also analyze:
+- Average Salary (if exists).
+- Most Frequent Department (if exists).
+- Max and Min Salary.
+- Any visible trends or anomalies.
+Use bullet points and keep it short and professional.
+
 Spreadsheet sample (first few rows):
 {df.head(10).to_string(index=False)}
 """
 
     try:
-        client = openai.OpenAI()
         response = client.chat.completions.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a professional and concise data analyst."},
+                {"role": "system", "content": "You are a helpful and concise data analyst."},
                 {"role": "user", "content": prompt}
             ],
             max_tokens=500,
@@ -65,46 +63,29 @@ Spreadsheet sample (first few rows):
     except Exception as e:
         return f"Error generating summary: {e}"
 
-def suggest_title(df):
-    prompt = f"""
-Based on the following spreadsheet data, suggest a short, professional report title (maximum 10 words). 
-Be smart and specific if you can.
-
-Spreadsheet sample (first few rows):
-{df.head(10).to_string(index=False)}
-"""
-    try:
-        title = chat_with_openai([
-            {"role": "system", "content": "You are a creative and professional report title generator."},
-            {"role": "user", "content": prompt}
-        ])
-        return title.strip()
-    except Exception as e:
-        return "Untitled Report"
-
-# Main app logic
+# App main logic
 if uploaded_file:
     try:
         df = pd.read_excel(uploaded_file, engine="openpyxl")
         st.success("✅ File successfully uploaded and processed.")
 
-        cleaned_df, removed_rows = clean_data(df)
+        cleaned_df, initial_rows, removed_rows = clean_data(df)
+
         st.subheader("🧼 Cleaned Data Preview")
-        st.dataframe(cleaned_df)
+        st.dataframe(cleaned_df, use_container_width=True)
 
         st.info(f"Removed {removed_rows} empty or duplicate row(s).")
 
-        # Title suggestion
         st.subheader("🏷️ Suggested Report Title")
-        with st.spinner("Thinking of a professional title..."):
-            report_title = suggest_title(cleaned_df)
-            st.text_input("Suggested Title:", value=report_title)
+        st.write("Suggested Title:")
 
-        # GPT summary
         st.subheader("🧠 AI Report Summary")
-        with st.spinner("Generating insights..."):
-            summary = gpt_summary(cleaned_df, removed_rows)
-            st.markdown(summary)
+        if "summary" not in st.session_state:
+            with st.spinner("Generating insights..."):
+                summary = gpt_summary(cleaned_df, initial_rows, removed_rows)
+                st.session_state.summary = summary
+
+        st.markdown(st.session_state.summary)
 
         # Download button
         xlsx_data = generate_xlsx_download(cleaned_df)
