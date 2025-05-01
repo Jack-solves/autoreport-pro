@@ -26,8 +26,12 @@ image_url = random.choice(image_pool)
 
 try:
     response = requests.get(image_url, timeout=10)
-    img = Image.open(BytesIO(response.content))
-    st.image(img, use_container_width=True)
+    content_type = response.headers.get("Content-Type", "")
+    if "image" in content_type:
+        img = Image.open(BytesIO(response.content))
+        st.image(img, use_container_width=True)
+    else:
+        st.warning("🖼️ No valid image found, skipping.")
 except Exception:
     st.warning("🖼️ Couldn't load image. Continuing without header image.")
 
