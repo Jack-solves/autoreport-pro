@@ -27,7 +27,7 @@ def get_gsheets_service():
             # Read credentials from Streamlit secrets
             secrets = st.secrets["google_oauth_credentials"]
             with open("client_secret.json", "w") as f:
-                 json.dump(dict(secrets), f)  # 👈 convert AttrDict to dict
+                 json.dump({"installed": dict(secrets)}, f)
 
             flow = InstalledAppFlow.from_client_secrets_file(
                 "client_secret.json", SCOPES)
