@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import openai
+from openai import OpenAI
 from io import BytesIO
 import os
 import random
@@ -45,7 +45,7 @@ st.markdown(
 
 # ========== OpenAI Setup ==========
 openai_api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
-client = openai.OpenAI(api_key=openai_api_key)
+client = OpenAI(api_key=openai_api_key)
 
 # ========== Functions ==========
 
