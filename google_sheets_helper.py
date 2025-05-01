@@ -33,7 +33,8 @@ def get_gsheets_service():
                     ("client_id", secrets["client_id"]),
                     ("client_secret", secrets["client_secret"]),
                     ("auth_uri", secrets["auth_uri"]),
-                    ("token_uri", secrets["token_uri"])
+                    ("token_uri", secrets["token_uri"]),
+                    ("redirect_uris", ["http://localhost"])
                 ])
             }
 
