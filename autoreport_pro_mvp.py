@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from openai import OpenAI
+import openai
 from io import BytesIO
 import os
 import random
@@ -14,7 +14,7 @@ st.set_page_config(page_title="AutoReport Pro", layout="centered")
 # Title
 st.title("📊 AutoReport Pro - Spreadsheet Cleaner + GPT Summary")
 
-# 📷 Header Image: Pick random from verified list
+# 📷 Header Image
 image_pool = [
     "https://images.unsplash.com/photo-1559027615-2a9b5e00b5ec?auto=format&fit=crop&w=800&q=60",
     "https://images.unsplash.com/photo-1556155092-490a1ba16284?auto=format&fit=crop&w=800&q=60",
@@ -35,7 +35,7 @@ try:
 except Exception:
     st.warning("🖼️ Couldn't load image. Continuing without header image.")
 
-# Friendly welcome message
+# Friendly message
 st.markdown(
     "<div style='text-align: center; font-size: 18px; padding: 10px;'>"
     "✨ Upload your spreadsheet or connect Google Sheets. Let AI clean and summarize it! ✨"
@@ -45,19 +45,17 @@ st.markdown(
 
 # ========== OpenAI Setup ==========
 openai_api_key = st.secrets.get("OPENAI_API_KEY", os.getenv("OPENAI_API_KEY"))
-client = OpenAI(api_key=openai_api_key)
+openai.api_key = openai_api_key
 
 # ========== Functions ==========
 
 def clean_data(df):
-    """Remove completely empty rows and duplicates."""
     initial_rows = df.shape[0]
     df_cleaned = df.dropna(how="all").drop_duplicates()
     removed_rows = initial_rows - df_cleaned.shape[0]
     return df_cleaned, removed_rows
 
 def generate_xlsx_download(df):
-    """Prepare cleaned dataframe for download."""
     buffer = BytesIO()
     with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
         df.to_excel(writer, index=False)
@@ -65,20 +63,18 @@ def generate_xlsx_download(df):
     return buffer
 
 def gpt_summary(df, removed_rows, filename):
-    """Ask OpenAI to summarize the cleaned spreadsheet."""
     prompt = f"""
 You are a professional data analyst. Strictly reply with:
 - Number of rows before and after cleaning
 - Duplicates or empty rows removed
 - Key quick statistics (average salary, common departments, max/min values)
-- 1-3 short bullet points on anomalies or interesting trends
-**Do not explain that you cannot interact with the file, just answer with direct results.**
+- 1–3 bullet points on anomalies or interesting trends
 
 Spreadsheet sample (first few rows):
 {df.head(10).to_string(index=False)}
 """
     try:
-        response = client.chat.completions.create(
+        response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
                 {"role": "system", "content": "You are a helpful and highly concise data analyst."},
@@ -87,12 +83,11 @@ Spreadsheet sample (first few rows):
             max_tokens=500,
             temperature=0.2,
         )
-        return response.choices[0].message.content
+        return response.choices[0].message["content"]
     except Exception as e:
         return f"Error generating summary: {e}"
 
 def suggest_title(filename):
-    """Generate a title based on filename."""
     base = os.path.splitext(filename)[0].replace("_", " ").replace("-", " ").title()
     return f"Data Quality Report for {base}"
 
