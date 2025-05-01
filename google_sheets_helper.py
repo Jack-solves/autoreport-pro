@@ -31,7 +31,7 @@ def get_gsheets_service():
 
             flow = InstalledAppFlow.from_client_secrets_file(
                 "client_secret.json", SCOPES)
-            creds = flow.run_local_server(port=0)
+            creds = flow.run_console()
 
             with open("token.pickle", "wb") as token:
                 pickle.dump(creds, token)
