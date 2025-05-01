@@ -6,6 +6,7 @@ import os
 import random
 import requests
 from PIL import Image
+import google_sheets_helper as gsh
 
 # ========== Setup ==========
 st.set_page_config(page_title="AutoReport Pro", layout="centered")
@@ -33,7 +34,7 @@ except Exception:
 # Friendly welcome message
 st.markdown(
     "<div style='text-align: center; font-size: 18px; padding: 10px;'>"
-    "✨ Upload your spreadsheet and let AI clean and summarize it for you! ✨"
+    "✨ Upload your spreadsheet or connect Google Sheets. Let AI clean and summarize it! ✨"
     "</div>",
     unsafe_allow_html=True
 )
@@ -91,8 +92,39 @@ def suggest_title(filename):
     base = os.path.splitext(filename)[0].replace("_", " ").replace("-", " ").title()
     return f"Data Quality Report for {base}"
 
-# ========== Main App Logic ==========
+# ========== Google Sheets Import ==========
+with st.expander("📥 Import from Google Sheets"):
+    sheet_url = st.text_input("Paste the Google Sheet ID or full link:")
+    if st.button("📄 Load Sheet"):
+        try:
+            sheet_id = sheet_url.strip().split("/d/")[-1].split("/")[0] if "/d/" in sheet_url else sheet_url
+            df = gsh.read_sheet(sheet_id)
+            st.success("✅ Google Sheet loaded successfully!")
+            st.dataframe(df)
 
+            cleaned_df, removed_rows = clean_data(df)
+            st.info(f"🔍 Removed {removed_rows} empty or duplicate row(s).")
+
+            st.subheader("🏷️ Suggested Report Title")
+            suggested_title = suggest_title(sheet_id)
+            st.markdown(f"**{suggested_title}**")
+
+            st.subheader("🧠 AI Report Summary")
+            with st.spinner("Generating insights..."):
+                summary = gpt_summary(cleaned_df, removed_rows, sheet_id)
+                st.markdown(summary)
+
+            xlsx_data = generate_xlsx_download(cleaned_df)
+            st.download_button(
+                label="⬇️ Download Cleaned Excel File",
+                data=xlsx_data,
+                file_name="cleaned_report.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        except Exception as e:
+            st.error(f"❌ Failed to load sheet: {e}")
+
+# ========== Excel Upload ==========
 uploaded_file = st.file_uploader("📂 Upload an Excel file", type=["xlsx"])
 
 if uploaded_file:
@@ -123,6 +155,15 @@ if uploaded_file:
             file_name="cleaned_report.xlsx",
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
-
     except Exception as e:
         st.error(f"❌ Error processing file: {e}")
+
+# ========== Google Sheets Export ==========
+if 'cleaned_df' in locals():
+    with st.expander("📤 Export to Google Sheets"):
+        if st.button("Upload cleaned data to Google Sheets"):
+            try:
+                sheet_link = gsh.write_sheet(cleaned_df)
+                st.success(f"✅ Exported to Google Sheets: [Open Sheet]({sheet_link})")
+            except Exception as e:
+                st.error(f"❌ Export failed: {e}")
