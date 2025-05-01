@@ -6,6 +6,7 @@ import pandas as pd
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
+from collections import OrderedDict
 
 SCOPES = [
     'https://www.googleapis.com/auth/spreadsheets',
@@ -15,27 +16,40 @@ SCOPES = [
 def get_gsheets_service():
     creds = None
 
-    # Store token in memory (or in file in prod)
+    # Check if token already exists
     if os.path.exists("token.pickle"):
         with open("token.pickle", "rb") as token:
             creds = pickle.load(token)
 
+    # If no (valid) credentials, trigger auth
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            # Read credentials from Streamlit secrets
+            # Load Google OAuth credentials from Streamlit secrets
             secrets = st.secrets["google_oauth_credentials"]
-            with open("client_secret.json", "w") as f:
-                 json.dump({"installed": dict(secrets)}, f)
+            client_secrets = {
+                "installed": OrderedDict([
+                    ("client_id", secrets["client_id"]),
+                    ("client_secret", secrets["client_secret"]),
+                    ("auth_uri", secrets["auth_uri"]),
+                    ("token_uri", secrets["token_uri"])
+                ])
+            }
 
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "client_secret.json", SCOPES)
+            # Save to a temp file for the auth flow
+            with open("client_secret.json", "w") as f:
+                json.dump(client_secrets, f)
+
+            # Run the OAuth flow
+            flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
             creds = flow.run_console()
 
+            # Save token to reuse later
             with open("token.pickle", "wb") as token:
                 pickle.dump(creds, token)
 
+    # Build and return the Sheets API service
     service = build("sheets", "v4", credentials=creds)
     return service
 
