@@ -11,15 +11,15 @@ from PIL import Image
 st.set_page_config(page_title="AutoReport Pro", layout="centered")
 
 # Title
-st.title("📊 AutoReport Pro - Spreadsheet Cleaner + Smart Summary")
+st.title("📊 AutoReport Pro - Spreadsheet Cleaner + GPT Summary")
 
-# Random reliable Unsplash image
+# 📷 Header Image: Pick random from verified list
 image_pool = [
-    "https://images.unsplash.com/photo-1559027615-2a9b5e00b5ec?auto=format&fit=crop&w=800&q=60",  # Office laptop
-    "https://images.unsplash.com/photo-1556155092-490a1ba16284?auto=format&fit=crop&w=800&q=60",  # Data screen
-    "https://images.unsplash.com/photo-1581091870627-3b6cc6c7f243?auto=format&fit=crop&w=800&q=60",  # Analytics chart
-    "https://images.unsplash.com/photo-1556742400-b5a63d574047?auto=format&fit=crop&w=800&q=60",  # Desk with laptop
-    "https://images.unsplash.com/photo-1603791452906-c5d31b4f59f5?auto=format&fit=crop&w=800&q=60",  # Minimal office
+    "https://images.unsplash.com/photo-1559027615-2a9b5e00b5ec?auto=format&fit=crop&w=800&q=60",
+    "https://images.unsplash.com/photo-1556155092-490a1ba16284?auto=format&fit=crop&w=800&q=60",
+    "https://images.unsplash.com/photo-1581091870627-3b6cc6c7f243?auto=format&fit=crop&w=800&q=60",
+    "https://images.unsplash.com/photo-1556742400-b5a63d574047?auto=format&fit=crop&w=800&q=60",
+    "https://images.unsplash.com/photo-1603791452906-c5d31b4f59f5?auto=format&fit=crop&w=800&q=60",
 ]
 image_url = random.choice(image_pool)
 
@@ -27,7 +27,7 @@ try:
     response = requests.get(image_url, timeout=10)
     img = Image.open(BytesIO(response.content))
     st.image(img, use_container_width=True)
-except Exception as e:
+except Exception:
     st.warning("🖼️ Couldn't load image. Continuing without header image.")
 
 # Friendly welcome message
@@ -72,7 +72,6 @@ You are a professional data analyst. Strictly reply with:
 Spreadsheet sample (first few rows):
 {df.head(10).to_string(index=False)}
 """
-
     try:
         response = client.chat.completions.create(
             model="gpt-4",
