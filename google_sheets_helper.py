@@ -21,12 +21,12 @@ def get_gsheets_service():
         with open("token.pickle", "rb") as token:
             creds = pickle.load(token)
 
-    # If no (valid) credentials, trigger auth
+    # If no valid credentials, trigger Streamlit-compatible auth flow
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            # Load Google OAuth credentials from Streamlit secrets
+            # Load Google OAuth credentials from secrets
             secrets = st.secrets["google_oauth_credentials"]
             client_secrets = {
                 "installed": OrderedDict([
@@ -37,24 +37,41 @@ def get_gsheets_service():
                 ])
             }
 
-            # Save to a temp file for the auth flow
+            # Save to file temporarily
             with open("client_secret.json", "w") as f:
                 json.dump(client_secrets, f)
 
-            # Run the OAuth flow
             flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
-            creds = flow.run_local_server(port=0)
+            auth_url, _ = flow.authorization_url(prompt="consent")
 
-            # Save token to reuse later
-            with open("token.pickle", "wb") as token:
-                pickle.dump(creds, token)
+            st.info("🔐 Please authorize access to your Google account:")
+            st.markdown(f"[Click here to authorize]({auth_url})")
 
-    # Build and return the Sheets API service
+            auth_code = st.text_input("Paste the authorization code here:")
+
+            if auth_code:
+                try:
+                    flow.fetch_token(code=auth_code)
+                    creds = flow.credentials
+
+                    # Save the credentials to token.pickle
+                    with open("token.pickle", "wb") as token:
+                        pickle.dump(creds, token)
+
+                    st.success("✅ Authorization complete!")
+                except Exception as e:
+                    st.error(f"❌ Failed to fetch token: {e}")
+                    return None
+            else:
+                st.stop()  # Wait until code is entered
+
     service = build("sheets", "v4", credentials=creds)
     return service
 
 def read_sheet(sheet_id, range_name="Sheet1"):
     service = get_gsheets_service()
+    if not service:
+        return pd.DataFrame()
     sheet = service.spreadsheets()
     result = sheet.values().get(spreadsheetId=sheet_id, range=range_name).execute()
     values = result.get("values", [])
@@ -65,6 +82,8 @@ def read_sheet(sheet_id, range_name="Sheet1"):
 
 def write_sheet(df, title="AutoReport Export"):
     service = get_gsheets_service()
+    if not service:
+        return "❌ Authorization failed"
     spreadsheet = {"properties": {"title": title}}
     spreadsheet = service.spreadsheets().create(body=spreadsheet, fields="spreadsheetId").execute()
     sheet_id = spreadsheet.get("spreadsheetId")
