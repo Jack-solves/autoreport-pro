@@ -17,7 +17,7 @@ def get_gsheets_service():
     creds = None
 
     if os.path.exists("token.pickle"):
-    os.remove("token.pickle")
+        os.remove("token.pickle")
     
     # Check if token already exists
     if os.path.exists("token.pickle"):
