@@ -3,7 +3,7 @@ import json
 import os
 import pickle
 import pandas as pd
-from google_auth_oauthlib.flow import InstalledAppFlow
+from google_auth_oauthlib.flow import Flow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from collections import OrderedDict
@@ -25,10 +25,12 @@ def get_gsheets_service():
             creds.refresh(Request())
         else:
             secrets = st.secrets["google_oauth_credentials"]
-            redirect_uri = "https://autoreport-pro.streamlit.app/oauth2callback"
+
+            # Use loopback redirect URI for out-of-band flow
+            redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
 
             client_secrets = {
-                "web": OrderedDict([
+                "installed": OrderedDict([
                     ("client_id", secrets["client_id"]),
                     ("client_secret", secrets["client_secret"]),
                     ("auth_uri", secrets["auth_uri"]),
@@ -37,11 +39,15 @@ def get_gsheets_service():
                 ])
             }
 
+            # Save config to temp file
             with open("client_secret.json", "w") as f:
                 json.dump(client_secrets, f)
 
-            flow = InstalledAppFlow.from_client_config(client_secrets, SCOPES)
-            flow.redirect_uri = redirect_uri
+            flow = Flow.from_client_config(
+                client_secrets,
+                scopes=SCOPES,
+                redirect_uri=redirect_uri
+            )
 
             auth_url, _ = flow.authorization_url(prompt="consent")
 
@@ -65,7 +71,6 @@ def get_gsheets_service():
 
     return build("sheets", "v4", credentials=creds)
 
-
 def read_sheet(sheet_id, range_name="Sheet1"):
     service = get_gsheets_service()
     if not service:
@@ -78,7 +83,6 @@ def read_sheet(sheet_id, range_name="Sheet1"):
     if not values:
         return pd.DataFrame()
     return pd.DataFrame(values[1:], columns=values[0])
-
 
 def write_sheet(df, title="AutoReport Export"):
     service = get_gsheets_service()
