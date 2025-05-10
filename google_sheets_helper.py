@@ -16,38 +16,33 @@ SCOPES = [
 def get_gsheets_service():
     creds = None
 
-    # Optional cleanup — remove existing token if you want a clean session
+    # Delete existing token to avoid stale credentials
     if os.path.exists("token.pickle"):
         os.remove("token.pickle")
 
-    # Check if token already exists
     if os.path.exists("token.pickle"):
         with open("token.pickle", "rb") as token:
             creds = pickle.load(token)
 
-    # If no valid credentials, trigger Streamlit-compatible auth flow
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            # ✅ FIX: Load entire group first
             secrets = st.secrets["google_oauth_credentials"]
 
-            # ✅ FIX: match "web" key, not "installed"
             client_secrets = {
                 "web": OrderedDict([
                     ("client_id", secrets["client_id"]),
                     ("client_secret", secrets["client_secret"]),
                     ("auth_uri", secrets["auth_uri"]),
                     ("token_uri", secrets["token_uri"]),
-                    ("redirect_uris", ["http://localhost"])
+                    ("redirect_uris", ["https://autoreport-pro.streamlit.app/"])
                 ])
             }
 
             with open("client_secret.json", "w") as f:
                 json.dump(client_secrets, f)
 
-            # Use redirect_uri only if you're NOT using Streamlit Cloud
             flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
             auth_url, _ = flow.authorization_url(prompt="consent")
 
@@ -67,10 +62,9 @@ def get_gsheets_service():
                     st.error(f"❌ Failed to fetch token: {e}")
                     return None
             else:
-                st.stop()  # Wait until code is entered
+                st.stop()
 
-    service = build("sheets", "v4", credentials=creds)
-    return service
+    return build("sheets", "v4", credentials=creds)
 
 def read_sheet(sheet_id, range_name="Sheet1"):
     service = get_gsheets_service()
