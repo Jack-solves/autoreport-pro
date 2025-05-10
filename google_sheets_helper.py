@@ -16,9 +16,10 @@ SCOPES = [
 def get_gsheets_service():
     creds = None
 
+    # Optional cleanup — remove existing token if you want a clean session
     if os.path.exists("token.pickle"):
         os.remove("token.pickle")
-    
+
     # Check if token already exists
     if os.path.exists("token.pickle"):
         with open("token.pickle", "rb") as token:
@@ -29,8 +30,10 @@ def get_gsheets_service():
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
         else:
-            # Load Google OAuth credentials from secrets
+            # ✅ FIX: Load entire group first
             secrets = st.secrets["google_oauth_credentials"]
+
+            # ✅ FIX: match "web" key, not "installed"
             client_secrets = {
                 "web": OrderedDict([
                     ("client_id", secrets["client_id"]),
@@ -41,13 +44,11 @@ def get_gsheets_service():
                 ])
             }
 
-            # Save to file temporarily
             with open("client_secret.json", "w") as f:
                 json.dump(client_secrets, f)
 
-            flow = InstalledAppFlow.from_client_secrets_file(
-            "client_secret.json", SCOPES
-            )
+            # Use redirect_uri only if you're NOT using Streamlit Cloud
+            flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
             auth_url, _ = flow.authorization_url(prompt="consent")
 
             st.info("🔐 Please authorize access to your Google account:")
@@ -59,11 +60,8 @@ def get_gsheets_service():
                 try:
                     flow.fetch_token(code=auth_code)
                     creds = flow.credentials
-
-                    # Save the credentials to token.pickle
                     with open("token.pickle", "wb") as token:
                         pickle.dump(creds, token)
-
                     st.success("✅ Authorization complete!")
                 except Exception as e:
                     st.error(f"❌ Failed to fetch token: {e}")
