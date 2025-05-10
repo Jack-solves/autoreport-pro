@@ -25,12 +25,10 @@ def get_gsheets_service():
             creds.refresh(Request())
         else:
             secrets = st.secrets["google_oauth_credentials"]
-
-            # Use loopback redirect URI for out-of-band flow
-            redirect_uri = "urn:ietf:wg:oauth:2.0:oob"
+            redirect_uri = "https://autoreport-pro.streamlit.app"
 
             client_secrets = {
-                "installed": OrderedDict([
+                "web": OrderedDict([
                     ("client_id", secrets["client_id"]),
                     ("client_secret", secrets["client_secret"]),
                     ("auth_uri", secrets["auth_uri"]),
@@ -39,7 +37,6 @@ def get_gsheets_service():
                 ])
             }
 
-            # Save config to temp file
             with open("client_secret.json", "w") as f:
                 json.dump(client_secrets, f)
 
@@ -70,39 +67,3 @@ def get_gsheets_service():
                 st.stop()
 
     return build("sheets", "v4", credentials=creds)
-
-def read_sheet(sheet_id, range_name="Sheet1"):
-    service = get_gsheets_service()
-    if not service:
-        return pd.DataFrame()
-    result = service.spreadsheets().values().get(
-        spreadsheetId=sheet_id,
-        range=range_name
-    ).execute()
-    values = result.get("values", [])
-    if not values:
-        return pd.DataFrame()
-    return pd.DataFrame(values[1:], columns=values[0])
-
-def write_sheet(df, title="AutoReport Export"):
-    service = get_gsheets_service()
-    if not service:
-        return "❌ Authorization failed"
-    spreadsheet = {
-        "properties": {"title": title}
-    }
-    spreadsheet = service.spreadsheets().create(
-        body=spreadsheet,
-        fields="spreadsheetId"
-    ).execute()
-    sheet_id = spreadsheet["spreadsheetId"]
-    body = {
-        "values": [df.columns.tolist()] + df.values.tolist()
-    }
-    service.spreadsheets().values().update(
-        spreadsheetId=sheet_id,
-        range="Sheet1",
-        valueInputOption="RAW",
-        body=body
-    ).execute()
-    return f"https://docs.google.com/spreadsheets/d/{sheet_id}"
