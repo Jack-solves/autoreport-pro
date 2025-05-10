@@ -25,7 +25,7 @@ def get_gsheets_service():
             creds.refresh(Request())
         else:
             secrets = st.secrets["google_oauth_credentials"]
-            redirect_uri = secrets["redirect_uri"]
+            redirect_uri = "https://autoreport-pro.streamlit.app/oauth2callback"
 
             client_secrets = {
                 "web": OrderedDict([
