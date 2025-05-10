@@ -43,8 +43,11 @@ def get_gsheets_service():
             with open("client_secret.json", "w") as f:
                 json.dump(client_secrets, f)
 
-            flow = InstalledAppFlow.from_client_secrets_file("client_secret.json", SCOPES)
-            auth_url, _ = flow.authorization_url(prompt="consent")
+            flow = InstalledAppFlow.from_client_config(
+                client_secrets,
+                SCOPES,
+                redirect_uri=st.secrets["google_oauth_credentials"]["redirect_uri"]
+            )
 
             st.info("🔐 Please authorize access to your Google account:")
             st.markdown(f"[Click here to authorize]({auth_url})")
