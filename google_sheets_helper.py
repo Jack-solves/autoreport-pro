@@ -32,7 +32,7 @@ def get_gsheets_service():
             # Load Google OAuth credentials from secrets
             secrets = st.secrets["google_oauth_credentials"]
             client_secrets = {
-                "installed": OrderedDict([
+                "web": OrderedDict([
                     ("client_id", secrets["client_id"]),
                     ("client_secret", secrets["client_secret"]),
                     ("auth_uri", secrets["auth_uri"]),
